@@ -16,9 +16,7 @@ library(here)
 theme_set(theme_bw())
 ```
 
-Analisaremos os episódios da falecida série Sense8. 
-
-Houve duas temporadas: quais foram os melhores episódios? A melhor temporada?
+Analisaremos os episódios das séries Sense 8, Orphan Black e Breaking Bad.
 
 ```{r}
 episodes = read_csv(here("data/series_from_imdb.csv"), 
@@ -28,18 +26,21 @@ episodes = read_csv(here("data/series_from_imdb.csv"),
                                      episode = col_character(), 
                                      url = col_character(),
                                      season = col_character())) %>% 
-    filter(series_name == "Sense8") 
+    filter(series_name %in% c("Sense8", "Orphan Black", "Breaking Bad"))
 ```
 
-## Quantas avaliações temos por episódio? 
+## Qual das séries que você escolheu é mais bem avaliada no IMDB? A diferença é grande? Pequena? Muda de acordo com as temporadas da série? 
 
-Cada episódio foi avaliado por um número diferente de usuários do IMDB. Vejamos como é essa distribuição. 
+Para responder essa pergunta precisaremos analisar a avaliação feita pelos usuários para episódio de cada série.
 
 ```{r}
-episodes %>% 
-    ggplot(aes(x = season, y = user_votes)) +
-    geom_violin() + 
-    geom_jitter(width = .07) 
+data_median <- episodes %>%
+    group_by(series_name, season) %>%
+    summarise(median_serie = median(user_rating)) 
+
+ggplot(data = data_median,  aes(x = season, y = median_serie, color = series_name, group=series_name)) +
+geom_line(stat='identity') +
+     geom_point()
 ```
 
 
