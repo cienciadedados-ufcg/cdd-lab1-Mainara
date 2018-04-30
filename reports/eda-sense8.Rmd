@@ -31,29 +31,59 @@ episodes = read_csv(here("data/series_from_imdb.csv"),
 
 ### Qual das séries que você escolheu é mais bem avaliada no IMDB? A diferença é grande? Pequena? Muda de acordo com as temporadas da série? 
 
-Para responder essas perguntas precisaremos analisar a avaliação feita pelos usuários para os episódios de cada série. Nesse gráfico são utilizadas as medianas das avaliações das temporadas.
+Para responder essas perguntas precisaremos analisar a avaliação feita pelos usuários para os episódios de cada série. 
+
+>> Cuidado com o uso do sumário sem olhar os pontos: 
+
+```{r}
+episodes %>% 
+    ggplot(aes(x = season, y = user_rating, color = series_name)) + 
+    geom_jitter()
+
+episodes %>% 
+    ggplot(aes(x = season, y = user_rating, color = series_name)) + 
+    geom_boxplot()
+```
+
+
+Nesse gráfico são utilizadas as medianas das avaliações das temporadas.
+
 ```{r}
 data_median <- episodes %>%
     group_by(series_name, season) %>%
     summarise(median_serie = median(user_rating)) 
     
 
-ggplot(data = data_median,  aes(x = season, y = median_serie, color = series_name, group=series_name)) +
-geom_line(stat='identity') +
-     geom_point()
+ggplot(data = data_median,
+       aes(x = season,
+           y = median_serie,
+           color = series_name,
+           group = series_name)) +
+    geom_line() +
+    geom_point()
 ```
 Através desse gráfico é possível perceber que a série mais bem avaliada no IMDB é Breaking Bad. Para verificar se a diferença entre as outras é grande, iremos calcular a média dos pontos obtidos através do gráfico:<br/>
 
 ```{r}
 data_median %>% 
     group_by(series_name) %>% 
-    summarise(media = mean(median_serie))
+    summarise(media = mean(median_serie)) %>% 
+    ggplot(aes(x = series_name, y = media)) + 
+    geom_col() + 
+    coord_flip()
 ```
 
 Dessa forma, concluímos que não há uma diferença muito grande com relação às outras séries.
-Além disso, observamos que os pontos do gráfico não seguem um padrão contínuo, ou seja, as avaliações estão variando de acordo com as temporadas.
+Além disso, observamos que os pontos do gráfico que as avaliações estão variando de acordo com as temporadas.
 
-### Qual das séries que você escolheu tem episódios de qualidade mais irregular segundo o IMDB? A diferença é grande? Pequena?
+>> Seria legal comentar tendem a aumentar, se não há padrão claro, etc.
+
+>> Outra coisa que senti falta é que ao comparar só a média / mediana, deixamos de fora informações legais como "Os melhores episódios estão melhorando?" "Os piores de cada temporada estão piorando?" A resposta pode usar mais de uma medida.
+
+
+### Qual das séries que você escolheu tem episódios de qualidade mais irregular segundo o IMDB? A diferença é grande? Pequena? 
+
+>> A ideia foi legal, mas por que não calcular o desvio padrão considerando todos os episódios, e calcular com base nas medianas? Seria importante explicar essa escolha. 
 
 Para obter essa resposta, vamos calcular o desvio padrão das medianas encontradas no gráfico anterior.<br/>
    - **Black Mirror**:
@@ -80,6 +110,16 @@ sd(med_OB)
 ```
 Ou seja, Breaking Bad possui mais episódios de qualidade mais irregular segundo o IMDB, pois um alto desvio padrão indica que os pontos dos dados estão espalhados por uma ampla gama de valores. A diferença dessa entre as outras duas é grande, mas das outras duas entre si é pequena.
 
+>> Geralmente filtrar em tabelas diferentes é desnecessário: 
+
+```{r}
+data_median %>%
+    group_by(series_name) %>% 
+    summarise(`Desvio padrão da mediana` = sd(median_serie))
+```
+
+
+
 ### Qual das séries ou temporadas tem episódios mais sem graça? (Um episódio é sem graça se ninguém nem ama nem odeia ele)
 
 Os boxplots contruídos para encontrar essa resposta foi montado com base no somatório da proporção de usuários que avaliaram o episódio com os valores 4, 5 ou 6. Nesse caso, estamos avaliando todos os episódios de cada série, então iremos descobrir qual das séries tem episódios mais sem graça.
@@ -105,15 +145,20 @@ Essa conclusão é feita com base na linha da mediana de cada boxplot, dessa for
 episodes %>% 
     filter(series_name %in% c("Black Mirror")) %>% 
     ggplot(aes(x = episode, y = user_rating)) + 
-    geom_bar(stat = 'identity') + 
+    geom_col() + 
     facet_wrap( ~ season) +
-    theme(axis.text.x = element_text(angle = 25, hjust = 1))
+    coord_flip()
                
 ```
 
 A quantidade de avaliações varia bastante. Exceto pelo primeiro episódio, os episódios da segunda temporada tem muito menos avaliações. Talvez porque os dados foram coletados logo depois que a segunda temporada foi lançada. 
 
+>> Acho que não entendi o raciocínio, mas a pergunta mirava em saber se os episódios iniciais e finais de uma temporada tem `user_rating` mais alto que os demais. Acho que você foi em outra direção. 
+
+
 ## Qual a distribuição da avaliação dos episódios?
+
+>> Por que sense8 sobreviveu aqui?
 
 ```{r}
 episodes %>% 
