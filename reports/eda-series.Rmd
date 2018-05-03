@@ -1,0 +1,215 @@
+---
+title: "Dados sobre séries de TV"
+output:
+  html_notebook:
+    toc: yes
+    toc_float: yes
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_float: yes
+---
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(gridExtra)
+library(here)
+theme_set(theme_bw())
+```
+
+Analisaremos os episódios das séries Black Mirror, Breaking Bad e Orphan Black.
+
+```{r}
+episodes = read_csv(here("data/series_from_imdb.csv"), 
+                    progress = FALSE,
+                    col_types = cols(.default = col_double(), 
+                                     series_name = col_character(), 
+                                     episode = col_character(), 
+                                     url = col_character(),
+                                     season = col_character())) %>% 
+    filter(series_name %in% c("Orphan Black", "Black Mirror", "Breaking Bad"))
+```
+
+### Qual das séries que você escolheu é mais bem avaliada no IMDB? A diferença é grande? Pequena? Muda de acordo com as temporadas da série? 
+
+Para responder essas perguntas precisaremos analisar a avaliação feita pelos usuários para os episódios de cada série. Nesse gráfico são utilizadas as medianas das avaliações das temporadas.
+```{r}
+data_median <- episodes %>%
+    group_by(series_name, season) %>%
+    summarise(median_serie = median(user_rating)) 
+    
+
+ggplot(data = data_median,  aes(x = season, y = median_serie, color = series_name, group=series_name)) +
+geom_line(stat='identity') +
+     geom_point()
+```
+Através desse gráfico é possível perceber que a série mais bem avaliada no IMDB é Breaking Bad. Para verificar se a diferença entre as outras é grande, iremos calcular a média dos pontos obtidos através do gráfico:<br/>
+
+```{r}
+data_median %>% 
+    group_by(series_name) %>% 
+    summarise(media = mean(median_serie))
+```
+
+Dessa forma, concluímos que não há uma diferença muito grande com relação às outras séries.
+Além disso, observamos que os pontos do gráfico não seguem um padrão contínuo, ou seja, as avaliações estão variando de acordo com as temporadas.
+
+### Qual das séries que você escolheu tem episódios de qualidade mais irregular segundo o IMDB? A diferença é grande? Pequena?
+
+Para obter essa resposta, vamos calcular o desvio padrão das medianas encontradas no gráfico anterior.<br/>
+   - **Black Mirror**:
+```{r}
+medians_BM <- data_median %>%
+    filter(series_name %in% c("Black Mirror"))
+med_BM = medians_BM$median_serie
+sd(med_BM)
+```
+
+   - **Breaking Bad**: 
+```{r}
+medians_BB <- data_median %>%
+    filter(series_name %in% c("Breaking Bad"))
+med_BB = medians_BB$median_serie
+sd(med_BB)
+```
+   - **Orphan Black**: 
+```{r}
+medians_OB <- data_median %>%
+    filter(series_name %in% c("Orphan Black"))
+med_OB = medians_OB$median_serie
+sd(med_OB)
+```
+Ou seja, Breaking Bad possui mais episódios de qualidade mais irregular segundo o IMDB, pois um alto desvio padrão indica que os pontos dos dados estão espalhados por uma ampla gama de valores. A diferença dessa entre as outras duas é grande, mas das outras duas entre si é pequena.
+
+### Qual das séries ou temporadas tem episódios mais sem graça? (Um episódio é sem graça se ninguém nem ama nem odeia ele)
+
+Os boxplots contruídos para encontrar essa resposta foi montado com base no somatório da proporção de usuários que avaliaram o episódio com os valores 4, 5 ou 6. Nesse caso, estamos avaliando todos os episódios de cada série, então iremos descobrir qual das séries tem episódios mais sem graça.
+
+```{r}
+data_not_funny <- episodes %>%
+    group_by(series_name, episode) %>%
+    summarise(sum = r4+r5+r6) 
+
+ggplot(data = data_not_funny,  aes(x = series_name, y = sum, color = series_name, group=series_name)) +
+geom_boxplot()
+
+```
+Pela distribuição dos dados mostrados nos boxplots, obtemos o seguinte ranking de séries que tem episódios mais sem graça:<br/>
+   **1º Black Mirror**<br/>
+   **2º Orphan Black**<br/>
+   **3º Breaking Bad**<br/>
+Essa conclusão é feita com base na linha da mediana de cada boxplot, dessa forma, a proporção de usuários que avaliaram os episódios de Black Mirror com os valores 4, 5 ou 6 é a maior dentre as 3 séries.
+
+### Episódios no início/fim da temporada são mais bem avaliados que os no meio? O que tende a ser melhor? Inícios ou finais de séries/temporadas?
+
+**- Black Mirror**
+
+```{r}
+season1BM = episodes %>% 
+    filter(series_name %in% c("Black Mirror")) %>% 
+    filter(season == 1)
+season2BM = episodes %>% 
+    filter(series_name %in% c("Black Mirror")) %>% 
+    filter(season == 2)
+season3BM = episodes %>% 
+    filter(series_name %in% c("Black Mirror")) %>% 
+    filter(season == 3)
+g1BM <- ggplot(data = season1BM, mapping = aes(x = episode, y = user_rating, fill = episode))+
+    geom_bar(stat = 'identity') + 
+    ggtitle("Temporada 1") +
+    theme(axis.text.x = element_text(angle = 25, hjust = 1), legend.position="none")
+g2BM <- ggplot(data = season2BM, mapping = aes(x = episode, y = user_rating, fill= episode))+
+    geom_bar(stat = 'identity') +
+    ggtitle("Temporada 2") +
+    theme(axis.text.x = element_text(angle = 25, hjust = 1), legend.position="none")
+g3BM <- ggplot(data = season3BM, mapping = aes(x = episode, y = user_rating, fill = episode))+
+    geom_bar(stat = 'identity') +
+    ggtitle("Temporada 3") +
+    theme(axis.text.x = element_text(angle = 25, hjust = 1), legend.position="none")
+grid.arrange(g1BM, g2BM, g3BM, nrow = 1)
+
+```
+
+No caso de Black Mirror, não há o padrão de que os episódios são melhores avaliadas no início ou no fim da temporada, acredito que isso ocorra porque os episódios são independentes *(apesar de o último episódio ser o mais bem avaliado na segunda temporada, não se torna padrão, porque essa fato não é repetido para as outras temporadas)*.
+
+**- Breaking Bad**
+```{r}
+season1BB = episodes %>% 
+    filter(series_name %in% c("Breaking Bad")) %>% 
+    filter(season == 1)
+season2BB = episodes %>% 
+    filter(series_name %in% c("Breaking Bad")) %>% 
+    filter(season == 2)
+season3BB = episodes %>% 
+    filter(series_name %in% c("Breaking Bad")) %>% 
+    filter(season == 3)
+season4BB = episodes %>% 
+    filter(series_name %in% c("Breaking Bad")) %>% 
+    filter(season == 4)
+season5BB = episodes %>% 
+    filter(series_name %in% c("Breaking Bad")) %>% 
+    filter(season == 5)
+g1BB <- ggplot(data = season1BB, mapping = aes(x = episode, y = user_rating, fill = episode))+
+    geom_bar(stat = 'identity') + 
+    ggtitle("Temporada 1") +
+    theme(axis.text.x = element_text(angle = 25, hjust = 1), legend.position="none")
+g2BB <- ggplot(data = season2BB, mapping = aes(x = episode, y = user_rating, fill= episode))+
+    geom_bar(stat = 'identity') +
+    ggtitle("Temporada 2") +
+    theme(axis.text.x = element_text(angle = 25, hjust = 1), legend.position="none")
+g3BB <- ggplot(data = season3BB, mapping = aes(x = episode, y = user_rating, fill = episode))+
+    geom_bar(stat = 'identity') +
+    ggtitle("Temporada 3") +
+    theme(axis.text.x = element_text(angle = 25, hjust = 1), legend.position="none")
+g4BB <- ggplot(data = season4BB, mapping = aes(x = episode, y = user_rating, fill = episode))+
+    geom_bar(stat = 'identity') +
+    ggtitle("Temporada 4") +
+    theme(axis.text.x = element_text(angle = 25, hjust = 1), legend.position="none")
+g5BB <- ggplot(data = season5BB, mapping = aes(x = episode, y = user_rating, fill = episode))+
+    geom_bar(stat = 'identity') +
+    ggtitle("Temporada 5") +
+    theme(axis.text.x = element_text(angle = 25, hjust = 1), legend.position="none")
+
+grid.arrange(g1BB, g2BB, g3BB, g4BB, g5BB, nrow = 2)
+
+```
+
+De acordo com os gráficos acima, Breaking Bad também não segue esse padrão, as avaliações variam igualmente ao longo da temporada. <br/>
+
+**- Orphan Black**
+```{r}
+season1OB = episodes %>% 
+    filter(series_name %in% c("Orphan Black")) %>% 
+    filter(season == 1)
+season2OB = episodes %>% 
+    filter(series_name %in% c("Orphan Black")) %>% 
+    filter(season == 2)
+season3OB = episodes %>% 
+    filter(series_name %in% c("Orphan Black")) %>% 
+    filter(season == 3)
+season4OB = episodes %>% 
+    filter(series_name %in% c("Orphan Black")) %>% 
+    filter(season == 4)
+
+g1OB <- ggplot(data = season1OB, mapping = aes(x = episode, y = user_rating, fill = episode))+
+    geom_bar(stat = 'identity') + 
+    ggtitle("Temporada 1") +
+    theme(axis.text.x = element_text(angle = 25, hjust = 1), legend.position="none")
+g2OB <- ggplot(data = season2OB, mapping = aes(x = episode, y = user_rating, fill= episode))+
+    geom_bar(stat = 'identity') +
+    ggtitle("Temporada 2") +
+    theme(axis.text.x = element_text(angle = 25, hjust = 1), legend.position="none")
+g3OB <- ggplot(data = season3OB, mapping = aes(x = episode, y = user_rating, fill = episode))+
+    geom_bar(stat = 'identity') +
+    ggtitle("Temporada 3") +
+    theme(axis.text.x = element_text(angle = 25, hjust = 1), legend.position="none")
+g4OB <- ggplot(data = season4OB, mapping = aes(x = episode, y = user_rating, fill = episode))+
+    geom_bar(stat = 'identity') +
+    ggtitle("Temporada 4") +
+    theme(axis.text.x = element_text(angle = 25, hjust = 1), legend.position="none")
+grid.arrange(g1OB, g2OB, g3OB, g4OB, nrow = 1)
+
+```
+
+Já no caso de Orphan Black, os primeiros episódios das temporadas 2 e 3 obtiveram avaliações melhores, apesar de alguns no meio também obterem avaliações boas.<br/>
+Portanto, não podemos concluir se o que tende a ser melhor nas temporadas são inícios ou finais.
