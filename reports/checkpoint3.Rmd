@@ -1,0 +1,45 @@
+---
+title: "Análise sobre Séries bem avaliadas"
+date: "3 de maio de 2018"
+author: "Mainara Cavalcanti de Farias"
+output:
+  html_notebook:
+    toc: yes
+    toc_float: yes
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_float: yes
+---
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(here)
+theme_set(theme_bw())
+```
+
+```{r}
+series = read_csv(here("data/series_from_imdb.csv"), 
+                    progress = FALSE,
+                    col_types = cols(.default = col_double(), 
+                                     series_name = col_character(), 
+                                     episode = col_character(), 
+                                     url = col_character(),
+                                     season = col_character())) 
+```
+
+```{r}
+unique(series$series_name) %>% 
+    length()
+```
+
+O objetivo dessa análise é avaliar séries de TV com relação ao seu gênero e qualidade. Serão utilizados dados de 511 séries que foram retirados do IMDb. 
+
+### Qual o gênero mais recorrente dentre as 10 séries mais bem avaliadas? E entre as 10 com piores avaliações? 
+
+```{r}
+data = series %>%
+    group_by(series_name, season) %>%
+    summarise(median_serie = median(user_rating))
+    
+```
