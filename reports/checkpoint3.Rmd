@@ -1,5 +1,5 @@
 ---
-title: "Análise sobre Séries bem avaliadas"
+title: "Análise sobre séries de TV"
 date: "3 de maio de 2018"
 author: "Mainara Cavalcanti de Farias"
 output:
@@ -28,18 +28,144 @@ series = read_csv(here("data/series_from_imdb.csv"),
                                      season = col_character())) 
 ```
 
-```{r}
-unique(series$series_name) %>% 
-    length()
-```
-
 O objetivo dessa análise é avaliar séries de TV com relação ao seu gênero e qualidade. Serão utilizados dados de 511 séries que foram retirados do IMDb. 
 
 ### Qual o gênero mais recorrente dentre as 10 séries mais bem avaliadas? E entre as 10 com piores avaliações? 
 
+Para chegarmos ao resultado que desejamos teremos que saber quais são as séries mais bem avaliadas e quais as com piores avaliações, então vamos primeiro fazer a mediana das avaliações das temporadas de cada série, e por fim, a média dessas temporadas, dessa forma poderemos classificar as séries quanto a sua avaliação.
+
 ```{r}
-data = series %>%
+medias = series %>%
     group_by(series_name, season) %>%
-    summarise(median_serie = median(user_rating))
+    summarise(mediana = median(user_rating)) %>% 
+    group_by(series_name) %>% 
+    summarise(media = mean(mediana)) %>% 
+    arrange(media)
+```
+
+Agora que temos a média das avaliações de cada série, podemos descobrir quais as 10 mais bem avaliadas e as 10 com piores avaliações.
+
+**As 10 séries com piores avaliações:**
+
+```{r}
+piores_series = head(medias, 10)
+names(piores_series)[1] <- "Nome da Série"
+names(piores_series)[2] <- "Média"
+piores_series
+```
+
+```{r} 
+ggplot(data = piores_series, aes(x = series_name, y = media, group = 1))+
+     geom_line() +
+     geom_point() +
+    coord_flip()
+```
+
+
+**As 10 séries com melhores avaliações:**
+
+```{r}
+melhores_series = tail(medias, 10)
+names(melhores_series)[1] <- "Nome da Série"
+names(melhores_series)[2] <- "Média"
+melhores_series
+```
+
+```{r} 
+ggplot(data = melhores_series, aes(x = series_name, y = media, group = 1))+
+     geom_line() +
+     geom_point() +
+    coord_flip()
+```
+
+Já que as séries estão classificadas, vamos adicionar o gênero de cada uma.
+
+```{r}
+genero_piores_series = piores_series %>% 
+    mutate(Genero = case_when(series_name == "American Idol" ~ "Reality Show",
+                              series_name == "Bionic Woman" ~ "Ficção Científica",
+                              series_name == "Work It" ~ "Comédia",
+                              series_name == "Free Agents" ~ "Comédia",
+                              series_name == "Bouquet Of Barbed Wire" ~ "Drama",
+                              series_name == "Hamarinn (The Cliff)" ~ "Drama",
+                              series_name == "Steven Seagal: Lawman" ~ "Reality Show",
+                              series_name == "Cupid" ~ "Drama",
+                              series_name == "Yu Yu Hakusho" ~ "Ação",
+                              series_name == "How To Live With Your Parents" ~ "Comédia"))
+genero_melhores_series = melhores_series %>% 
+    mutate(Genero = case_when(series_name == "Person Of Interest" ~ "Drama",
+                              series_name == "The Originals" ~ "Drama",
+                              series_name == "The Leftovers" ~ "Drama",
+                              series_name == "Super Girl" ~ "Super-herói",
+                              series_name == "Fargo" ~ "Humor negro",
+                              series_name == "Daredevil" ~ "Drama",
+                              series_name == "Sherlock" ~ "Aventura",
+                              series_name == "Game of Thrones" ~ "Fantasia",
+                              series_name == "Turn" ~ "Drama",
+                              series_name == "Stranger Things" ~ "Fantasia"))
     
 ```
+
+E por fim, vamos verificar o gêneros mais recorrente nos dois conjuntos de dados.<br/>
+<br/>
+**Gênero(s) mais frequentes nas piores séries:**
+```{r}
+ggplot(data = genero_piores_series, aes(x = Genero,  fill = Genero)) +
+    geom_histogram(stat = 'count')
+```
+
+Ou seja, comédia e drama são os gêneros mais frequentes, porém acredito que há mais séries de drama no geral, por isso há mais chance de estar presente nesse resultado.
+
+**Gênero(s) mais frequentes nas melhores séries:**
+```{r}
+ggplot(data = genero_melhores_series, aes(x = Genero,  fill = Genero)) +
+    geom_histogram(stat = 'count')
+```
+
+Nesse caso, metade das séries mais bem avaliadas são do gênero drama e apesar de ter dito anteriormente que acredito que há mais séries desse gênero e por esse motivo existir mais chances dele aparecer nessa resposta, imagino que esse resultado reflita a realidade.
+
+###  Qual o momento em que as séries classificadas como piores de acordo com as avaliações tedem a ter suas avaliações mais baixas? Nas primeiras ou últimas temporadas?
+
+```{r}
+series %>% 
+    filter(series_name %in% c("American Idol", "Bionic Woman", 
+                              "Work It", "Free Agents", 
+                              "Bouquet Of Barbed Wire", "Hamarinn (The Cliff)",
+                              "Steven Seagal: Lawman", "Cupid",
+                              "Yu Yu Hakusho", "How To Live With Your Parents")) %>% 
+    ggplot(aes(x = season, y = user_rating, color = season, fill = season)) + 
+    geom_col() + 
+    facet_wrap( ~ series_name)
+```
+
+Através dos gráficos gerados acima, podemos concluir que a grande maioria dessas séries só duram até a primeira temporada, com exceção de American Idol (15 temporadas) e StevenSeagal: Lawman (3 temporadas), e nessas duas, as últimas temporadas são as que possuem avaliações mais baixas.
+
+A partir dessas informações que foram obtidas podemos responder as perguntas a seguir com mais facilidade.
+
+#### Em que temporada Person Of Interest (série mais bem avaliada) tem sua melhor avaliação? E a pior?
+
+```{r}
+series %>% 
+    filter(series_name %in% c("Person Of Interest")) %>% 
+    group_by(season, episode) %>% 
+    ggplot(aes(x = season, y = user_rating, color = season)) +
+    geom_boxplot() +
+    geom_jitter()
+```
+A série foi tendo sua avaliação melhorada ao passar do tempo, a terceira e quinta temporada foram as que obtiveram maior pontuação, enquanto que a primeira foi a menor. 
+
+#### Qual a média de temporadas das séries melhores avaliadas? 
+```{r}
+series %>% 
+    filter(series_name %in% c("Person Of Interest", "The Originals", 
+                              "The Leftovers", "Super Girl", 
+                              "Fargo", "Daredevil",
+                              "Sherlock", "Game of Thrones",
+                              "Turn", "Stranger Things")) %>% 
+    group_by(series_name) %>% 
+    summarise(qnt_temporadas = max(season)) %>% 
+    summarise(soma = sum(as.numeric(qnt_temporadas))) %>% 
+    summarise(media = soma/10)
+```
+
+A média de temporadas das séries bem avaliadas é baixa, com isso podemos concluir que uma série com muitas temporadas não implica em uma série de qualidade, inclusive American Idol possui 15 temporadas e foi a série pior avaliada entre todo o banco de dados.
